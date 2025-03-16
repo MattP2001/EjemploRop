@@ -180,6 +180,7 @@ return ValidateNewAccount(account)
   .Bind(SaveUser)
   .Bind(SendCode);
 ````
+
 #### Fallback
 The `Fallback` method is executed when the previous method has a failure response. 
 
@@ -188,6 +189,19 @@ Example:
 return ValidateNewAccount(account)
   .Bind(SaveUser) //<- Assuming this fails
   .Fallback(SaveInAnotherDatabase) //<- then this is executed if it didnt failed, it does not get executed.
+  .Bind(SendCode);
+````
+
+#### Fallback with Condition  
+The `Fallback` method is executed **only if** the chain is in an Error state **and** the predicate condition is met.  
+If the condition is met, the fallback method is executed and replaces the previous error.  
+If the condition is **not** met, the original failure remains unchanged.  
+
+Example:  
+```csharp
+return ValidateNewAccount(account)
+  .Bind(SaveUser) //<- Assuming this fails
+  .Fallback(x => x.Errors.First().Message == "Example ErrorMessage", SaveInAnotherDatabase) //<- Executed only if the condition is met
   .Bind(SendCode);
 ````
 
