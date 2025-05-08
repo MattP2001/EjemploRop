@@ -21,14 +21,35 @@ namespace ROP
         {
             try
             {
-                if (!r.Success)
-                {
-                    return Result.Failure<T>(r.Errors, r.HttpStatusCode);
-                }
+                var thenResult = r.Bind(x => method(x));
 
-                var thenResult = method(r.Value);
+                return thenResult.Success 
+                    ? r.Value 
+                    : Result.Failure<T>(thenResult.Errors, thenResult.HttpStatusCode);
+            }
+            catch (Exception e)
+            {
+                ExceptionDispatchInfo.Capture(e).Throw();
+                throw;
+            }
+        }
 
-                return thenResult.Success ? r.Value 
+        /// <summary>
+        /// Allows to execute a method on the chain, but the result is the output of the caller
+        /// (its result gets ignored) Example:
+        /// method 1-> returns int
+        /// thenMethod returns string
+        /// value on the chain -> int
+        /// </summary>
+        /// <returns>The original result if successful; otherwise, a failure result.</returns>
+        public static async Task<Result<T>> Then<T, U>(this Result<T> r, Func<T, Task<Result<U>>> method)
+        {
+            try
+            {
+                var thenResult = await r.Bind(x => method(x));
+
+                return thenResult.Success 
+                    ? r.Value
                     : Result.Failure<T>(thenResult.Errors, thenResult.HttpStatusCode);
             }
             catch (Exception e)
@@ -51,15 +72,7 @@ namespace ROP
             try
             {
                 var r = await result;
-                if (!r.Success)
-                {
-                    return Result.Failure<T>(r.Errors, r.HttpStatusCode);
-                }
-
-                var thenResult = await method(r.Value);
-
-                return thenResult.Success ? r.Value 
-                    : Result.Failure<T>(thenResult.Errors, thenResult.HttpStatusCode);
+                return await r.Then(method);
             }
             catch (Exception e)
             {
@@ -81,15 +94,7 @@ namespace ROP
             try
             {
                 var r = await result;
-                if (!r.Success)
-                {
-                    return Result.Failure<T>(r.Errors, r.HttpStatusCode);
-                }
-
-                var thenResult = method(r.Value);
-
-                return thenResult.Success ? r.Value
-                    : Result.Failure<T>(thenResult.Errors, thenResult.HttpStatusCode);
+                return r.Then(method);
             }
             catch (Exception e)
             {

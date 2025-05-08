@@ -22,8 +22,31 @@ namespace ROP
         {
             try
             {
-                return r.Success
+                return r.Success 
                     ? method(r.Value)
+                    : Result.Failure<U>(r.Errors, r.HttpStatusCode);
+            }
+            catch (Exception e)
+            {
+                ExceptionDispatchInfo.Capture(e).Throw();
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Allows to chain an async method to a non async method, the output of the first is the input of the second.
+        /// </summary>
+        /// <param name="r">current Result chain</param>
+        /// <param name="method">method to execute</param>
+        /// <typeparam name="T">Input type</typeparam>
+        /// <typeparam name="U">Output type</typeparam>
+        /// <returns>Async Result Structure of the return type</returns>
+        public static async Task<Result<U>> Bind<T, U>(this Result<T> r, Func<T, Task<Result<U>>> method)
+        {
+            try
+            {
+                return r.Success 
+                    ? await method(r.Value)
                     : Result.Failure<U>(r.Errors, r.HttpStatusCode);
             }
             catch (Exception e)
@@ -41,14 +64,12 @@ namespace ROP
         /// <typeparam name="T">Input type</typeparam>
         /// <typeparam name="U">Output type</typeparam>
         /// <returns>Async Result Structure of the return type</returns>
-        public static async Task<Result<U>> Bind<T, U>(this Task<Result<T>> result, Func<T, Task<Result<U>>> method)
+        public static async Task<Result<U>> Bind<T, U>(this Task<Result<T>> result, Func<T, Task<Result<U>>> method) 
         {
             try
             {
                 var r = await result;
-                return r.Success
-                    ? await method(r.Value)
-                    : Result.Failure<U>(r.Errors, r.HttpStatusCode);
+                return await r.Bind(method);
             }
             catch (Exception e)
             {
@@ -70,10 +91,7 @@ namespace ROP
             try
             {
                 var r = await result;
-
-                return r.Success
-                    ? method(r.Value)
-                    : Result.Failure<U>(r.Errors, r.HttpStatusCode);
+                return r.Bind(method);
             }
             catch (Exception e)
             {

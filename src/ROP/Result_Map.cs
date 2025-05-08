@@ -17,9 +17,24 @@ namespace ROP
         {
             try
             {
-                return r.Success
-                    ? Result.Success(mapper(r.Value))
-                    : Result.Failure<U>(r.Errors, r.HttpStatusCode);
+                return r.Bind(x => mapper(x).Success());
+            }
+            catch (Exception e)
+            {
+                ExceptionDispatchInfo.Capture(e).Throw();
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Allows to get map from a result T to U, the mapper method do not need to return a result T
+        /// </summary>
+        /// <returns>A result of type U.</returns>
+        public static async Task<Result<U>> Map<T, U>(this Result<T> r, Func<T, Task<U>> mapper)
+        {
+            try
+            {
+                return await r.Bind(async x => (await mapper(x)).Success());
             }
             catch (Exception e)
             {
@@ -37,9 +52,7 @@ namespace ROP
             try
             {
                 var r = await result;
-                return r.Success
-                    ? Result.Success(mapper(r.Value))
-                    : Result.Failure<U>(r.Errors, r.HttpStatusCode);
+                return r.Map(mapper);
             }
             catch (Exception e)
             {
@@ -57,9 +70,7 @@ namespace ROP
             try
             {
                 var r = await result;
-                return r.Success
-                    ? Result.Success(await mapper(r.Value))
-                    : Result.Failure<U>(r.Errors, r.HttpStatusCode);
+                return await r.Map(mapper);
             }
             catch (Exception e)
             {
